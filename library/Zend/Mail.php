@@ -497,20 +497,31 @@ class Zend_Mail extends Zend_Mime_Message
      * characters.
      *
      * @param  string $value
-     * @param  int $linelength
      * @return string
      */
-    protected function _encodeHeader($value, $linelength = Zend_Mime::LINELENGTH)
+    protected function _encodeHeader($value)
     {
         if (Zend_Mime::isPrintable($value) === false) {
-            if ($this->getHeaderEncoding() === Zend_Mime::ENCODING_QUOTEDPRINTABLE) {
-                $value = Zend_Mime::encodeQuotedPrintableHeader($value, $this->getCharset(), $linelength, Zend_Mime::LINEEND);
-            } else {
-                $value = Zend_Mime::encodeBase64Header($value, $this->getCharset(), $linelength, Zend_Mime::LINEEND);
-            }
+            $value = $this->encodeValue($value);
         }
 
         return $value;
+    }
+
+    /**
+     * Encodes value according to RFC1522
+     *
+     * @param string $value A value for encoding
+     * @param int $linelength A string length
+     * @return string Encoded value
+     */
+    private function encodeValue($value, $linelength = Zend_Mime::LINELENGTH)
+    {
+        if ($this->getHeaderEncoding() === Zend_Mime::ENCODING_QUOTEDPRINTABLE) {
+            return Zend_Mime::encodeQuotedPrintableHeader($value, $this->getCharset(), $linelength, Zend_Mime::LINEEND);
+        }
+
+        return Zend_Mime::encodeBase64Header($value, $this->getCharset(), $linelength, Zend_Mime::LINEEND);
     }
 
     /**
@@ -1271,7 +1282,7 @@ class Zend_Mail extends Zend_Mime_Message
         if ($name === '' || $name === null || $name === $email) {
             return $email;
         } elseif (Zend_Mime::isPrintable($name) === false
-            && strlen($this->_encodeHeader($name, PHP_INT_MAX)) > Zend_Mime::LINELENGTH
+            && strlen($this->encodeValue($name, PHP_INT_MAX)) > Zend_Mime::LINELENGTH
         ) {
             return $email;
         } else {
