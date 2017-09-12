@@ -289,6 +289,81 @@ class Zend_Mail_MailTest extends PHPUnit_Framework_TestCase
     }
 
     /**
+     * @dataProvider emailNameDataProvider
+     */
+    public function testHeaderEncodingWithLongEncodedString($name, $expectedResult, $encoding)
+    {
+        $mail = new Zend_Mail("UTF-8");
+        $mail->setHeaderEncoding($encoding);
+        $mail->setBodyText('My Nice Test Text');
+        $mail->setSubject('Subject');
+
+        $mail->setReplyTo('mail@example.com', $name);
+        $mail->setFrom('mail@example.com', $name);
+        $mail->addTo('mail@example.com', $name);
+        $mail->addCc('mail@example.com', $name);
+
+        $mock = new Zend_Mail_Transport_Mock();
+        $mail->send($mock);
+
+        $this->assertTrue($mock->called);
+
+        $this->assertEquals($mock->headers['Reply-To'][0], $expectedResult);
+        $this->assertEquals($mock->headers['From'][0], $expectedResult);
+        $this->assertEquals($mock->headers['To'][0], $expectedResult);
+        $this->assertEquals($mock->headers['Cc'][0], $expectedResult);
+    }
+
+    /**
+     * @return array
+     */
+    public function emailNameDataProvider()
+    {
+        return array(
+            array(
+                'name' => '',
+                'expectedResult' => 'mail@example.com',
+                'encoding' => Zend_Mime::ENCODING_QUOTEDPRINTABLE,
+            ),
+            array(
+                'name' => 'John Doe',
+                'expectedResult' => 'John Doe <mail@example.com>',
+                'encoding' => Zend_Mime::ENCODING_QUOTEDPRINTABLE,
+            ),
+            array(
+                'name' => 'John Doe John Doe John Doe John Doe John Doe John Doe John Doe',
+                'expectedResult' => 'John Doe John Doe John Doe John Doe John Doe John Doe John Doe <mail@example.com>',
+                'encoding' => Zend_Mime::ENCODING_QUOTEDPRINTABLE,
+            ),
+            array(
+                'name' => 'ジョン',
+                'expectedResult' => '=?UTF-8?Q?=E3=82=B8=E3=83=A7=E3=83=B3?= <mail@example.com>',
+                'encoding' => Zend_Mime::ENCODING_QUOTEDPRINTABLE,
+            ),
+            array(
+                'name' => 'ジョン・ドゥー',
+                'expectedResult' => 'mail@example.com',
+                'encoding' => Zend_Mime::ENCODING_QUOTEDPRINTABLE,
+            ),
+            array(
+                'name' => 'ジョン・ドゥー',
+                'expectedResult' => '=?UTF-8?B?44K444On44Oz44O744OJ44Kl44O8?= <mail@example.com>',
+                'encoding' => Zend_Mime::ENCODING_BASE64,
+            ),
+            array(
+                'name' => 'ジョン・ドゥー ジョン・ドゥー ジョン・ドゥー',
+                'expectedResult' => 'mail@example.com',
+                'encoding' => Zend_Mime::ENCODING_BASE64,
+            ),
+            array(
+                'name' => 'ジョン・ドゥー ジョン・ドゥー ジョン・ドゥー',
+                'expectedResult' => 'mail@example.com',
+                'encoding' => Zend_Mime::ENCODING_QUOTEDPRINTABLE,
+            ),
+        );
+    }
+
+    /**
      * @group ZF-7799
      */
     public function testHeaderSendMailTransportHaveNoRightTrim()

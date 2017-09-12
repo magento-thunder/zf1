@@ -497,15 +497,16 @@ class Zend_Mail extends Zend_Mime_Message
      * characters.
      *
      * @param  string $value
+     * @param  int $linelength
      * @return string
      */
-    protected function _encodeHeader($value)
+    protected function _encodeHeader($value, $linelength = Zend_Mime::LINELENGTH)
     {
         if (Zend_Mime::isPrintable($value) === false) {
             if ($this->getHeaderEncoding() === Zend_Mime::ENCODING_QUOTEDPRINTABLE) {
-                $value = Zend_Mime::encodeQuotedPrintableHeader($value, $this->getCharset(), Zend_Mime::LINELENGTH, Zend_Mime::LINEEND);
+                $value = Zend_Mime::encodeQuotedPrintableHeader($value, $this->getCharset(), $linelength, Zend_Mime::LINEEND);
             } else {
-                $value = Zend_Mime::encodeBase64Header($value, $this->getCharset(), Zend_Mime::LINELENGTH, Zend_Mime::LINEEND);
+                $value = Zend_Mime::encodeBase64Header($value, $this->getCharset(), $linelength, Zend_Mime::LINEEND);
             }
         }
 
@@ -1268,6 +1269,10 @@ class Zend_Mail extends Zend_Mime_Message
     protected function _formatAddress($email, $name)
     {
         if ($name === '' || $name === null || $name === $email) {
+            return $email;
+        } elseif (Zend_Mime::isPrintable($name) === false
+            && strlen($this->_encodeHeader($name, PHP_INT_MAX)) > Zend_Mime::LINELENGTH
+        ) {
             return $email;
         } else {
             $encodedName = $this->_encodeHeader($name);
